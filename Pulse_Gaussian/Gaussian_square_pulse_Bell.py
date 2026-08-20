@@ -62,40 +62,33 @@ N = np.diag(np.arange(dim))
 ident = np.eye(dim, dtype=complex)
 full_ident = np.eye(dim**2, dtype=complex)
 
-N0 = np.kron(ident,np.kron(ident, N))
-N1 = np.kron(ident,np.kron(N, ident))
-N2 = np.kron(np.kron(N, ident),ident)
-
-a0 = np.kron(ident,np.kron(ident, a))
-a1 = np.kron(ident,np.kron(a, ident))
-a2 = np.kron(np.kron(a, ident),ident)
+N0 =np.kron(ident, N)
+N1 = np.kron(N, ident)
 
 
-a0dag = np.kron(ident,np.kron(ident, adag))
-a1dag = np.kron(ident,np.kron(adag, ident))
-a2dag = np.kron(np.kron(adag, ident),ident)
+a0 = np.kron(ident, a)
+a1 = np.kron(a, ident)
 
+a0dag = np.kron(ident, adag)
+a1dag = np.kron(adag, ident)
 
 # Haniltoniano del sistema
-static_ham = 2*np.pi*v7 * N0+   delta7*(a0dag@a0dag@a0@a0)/2   + 2*np.pi*v8 * N1+   delta8*(a1dag@a1dag@a1@a1)/2   + 2*np.pi*v9* N2 + delta9*(a2dag@a2dag@a2@a2)/2  + J78*(a0dag @ a1 +  a0 @ a1dag) + J89*(a1dag @ a2 +  a1 @ a2dag)
+static_ham = 2*np.pi*v7 * N0+   delta7*(a0dag@a0dag@a0@a0)/2   + 2*np.pi*v8 * N1+   delta8*(a1dag@a1dag@a1@a1)/2  + J78*(a0dag @ a1 +  a0 @ a1dag) 
 
 # Hamiltonianos de controles
 H_drive7 =  r0 * (a0 + a0dag)
 H_drive8 =  r1 * (a1 + a1dag)
-H_drive9 =  r2 * (a2 + a2dag)
-  
 
-y0 = Statevector([1,0,0]).tensor(Statevector([1,0,0])).tensor(Statevector([1,0,0]))
+y0 = np.array([1,0,0,0,0,0,0,0,0])
+# y0  = Statevector.from_label("00")
 # y0  = Statevector.from_label("000")
-
-  
 
 
 # Solucionar la ecuación de Schrödinger
 solver  = Solver(static_hamiltonian=static_ham,
-                 hamiltonian_operators=[H_drive7, H_drive8, H_drive9,H_drive7,H_drive8],
-                 hamiltonian_channels=["d0", "d1", "d2","u0","u1"],
-                 channel_carrier_freqs= {"d0": v7, "d1": v8, "d2": v9, "u0": v8, "u1": v9},
+                 hamiltonian_operators=[H_drive7, H_drive8,H_drive7],
+                 hamiltonian_channels=["d0", "d1","u0"],
+                 channel_carrier_freqs= {"d0": v7, "d1": v8, "u0": v8},
                  dt=dt,
                  array_library="jax")
 
@@ -204,17 +197,17 @@ def evo_bell_qubit(x):
 
 
     redu_vector = [] 
-    for i in [0,1,3,4,9,10,12,13]:
+    for i in [0,1,3,4]:
         redu_vector.append(yf[i])
     yr = np.array(redu_vector)/np.linalg.norm(redu_vector)
 
 
 
     # rho_bc = partial_trace(Statevector(yr), [0])
-    # rho_ac = partial_trace(Statevector(yr), [1])
-    rho_ab = partial_trace(Statevector(yr), [2])
+    rho_a = partial_trace(Statevector(yr), [1])
+    rho_b = partial_trace(Statevector(yr), [0])
 
-    cost = (negativity(rho_ab,[0]) -  0.5)**2 + (negativity(rho_ab,[1]) -  0.5)**2 
+    cost = (negativity(rho_a,[1]) - 0.5)**2 + (negativity(rho_b,[0]) - 0.5)**2
     return cost
 
 def callback(xk, convergence):
